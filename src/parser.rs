@@ -211,7 +211,7 @@ macro_rules! getc_no_eof {
 impl<Iter> Parser<Iter>
     where Iter: Iterator<Item=io::Result<u8>>
 {
-    pub fn new(input: Iter) -> Parser<Iter> {
+    pub fn new(input: Iter) -> Self {
         Parser {
             input : input,
             line  : 1,
