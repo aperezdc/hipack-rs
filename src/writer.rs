@@ -123,7 +123,7 @@ impl<W> Writer<W, CompactFormatter>
     where W: io::Write
 {
     #[inline]
-    fn compact(writer: W) -> Self {
+    pub fn compact(writer: W) -> Self {
         Writer::with_formatter(writer, CompactFormatter)
     }
 }
@@ -132,7 +132,7 @@ impl<W> Writer<W>
     where W: io::Write
 {
     #[inline]
-    fn pretty(writer: W) -> Self {
+    pub fn pretty(writer: W) -> Self {
         Writer::with_formatter(writer, PrettyFormatter::new())
     }
 }
