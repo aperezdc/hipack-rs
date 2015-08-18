@@ -1,0 +1,4 @@
+[package]
+name = "hipack"
+version = "0.1.0"
+authors = ["Adrian Perez de Castro <aperez@igalia.com>"]
