@@ -454,6 +454,21 @@ impl<Iter> Parser<Iter>
     fn parse_number(&mut self) -> Result<Value> {
         panic!("Not implemented")
     }
+
+    pub fn parse_message(&mut self) -> Result<Value> {
+        try!(self.parse_whitespace());
+        match try!(self.peek()) {
+            None => Ok(Value::Dict(BTreeMap::new())),
+            Some(b'{') => {
+                self.advance();
+                try!(self.parse_whitespace());
+                let result = try!(self.parse_keyval_items(Some(b'}')));
+                try!(self.match_char(b'}', ErrorCode::UnterminatedMessage));
+                Ok(result)
+            },
+            _ => self.parse_keyval_items(None),
+        }
+    }
 }
 
 
