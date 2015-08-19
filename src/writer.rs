@@ -163,6 +163,7 @@ impl<W, F> Writer<W, F>
         }
     }
 
+    #[inline]
     fn write_bool(&mut self, value: bool) -> io::Result<()> {
         if value {
             self.writer.write_all(b"True")
@@ -171,6 +172,7 @@ impl<W, F> Writer<W, F>
         }
     }
 
+    #[inline]
     fn write_float(&mut self, value: f64) -> io::Result<()> {
         if value.is_nan() || value.is_infinite() {
             write!(self.writer, "{}", value)
@@ -184,10 +186,12 @@ impl<W, F> Writer<W, F>
         }
     }
 
+    #[inline]
     fn write_integer(&mut self, value: i64) -> io::Result<()> {
         write!(self.writer, "{}", value)
     }
 
+    #[inline]
     fn write_string(&mut self, value: &String) -> io::Result<()> {
         try!(self.writer.write_all(b"\""));
         for ch in value.bytes() {
@@ -228,6 +232,7 @@ impl<W, F> Writer<W, F>
         self.format.end_compound(&mut self.writer, b']')
     }
 
+    #[inline]
     fn write_dict(&mut self, dict: &BTreeMap<String, Value>) -> io::Result<()> {
         if dict.is_empty() {
             return self.writer.write_all(b"{}");
@@ -258,6 +263,7 @@ impl<W, F> Writer<W, F>
         Ok(())
     }
 
+    #[inline]
     pub fn write_message(&mut self, value: &BTreeMap<String, Value>) -> io::Result<()> {
         self.write_keyval_items(value)
     }
