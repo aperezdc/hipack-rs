@@ -10,6 +10,7 @@ use std::error;
 use std::result;
 use std::collections::BTreeMap;
 use super::value::Value;
+use std::f64::{NAN, INFINITY};
 
 
 #[derive(Clone, PartialEq)]
@@ -115,19 +116,6 @@ fn is_key_character(ch: u8) -> bool {
 
 
 #[inline]
-fn is_number_character(ch: u8) -> bool {
-    match ch { b'.'         // Decimal period.
-             | b'+' | b'-'  // Sign.
-             | b'0'...b'9'  // Decimal digits.
-             | b'a'...b'f'  // Lowercase hex.
-             | b'A'...b'F'  // Uppercase hex.
-               => true,
-             _ => false,
-    }
-}
-
-
-#[inline]
 fn is_xdigit_character(ch: u8) -> bool {
     match ch { b'0'...b'9'
              | b'a'...b'f'
@@ -163,9 +151,9 @@ fn xdigit_to_int(ch: u8) -> u8 {
 
 
 #[inline]
-fn is_nonzero_octal_character(ch: u8) -> bool {
+fn is_octal_character(ch: u8) -> bool {
     match ch {
-        b'1'...b'7' => true,
+        b'0'...b'7' => true,
         _ => false,
     }
 }
@@ -207,6 +195,36 @@ macro_rules! getc_no_eof {
     }
 }
 
+macro_rules! parse_digits {
+    ($e:expr, $base:expr, $check_digit:expr, $negative:expr) => {{
+        if !$check_digit(peek_no_eof!($e)) {
+            return $e.parse_error(ErrorCode::InvalidNumberValue);
+        }
+        let mut result = 0i64;
+        loop {
+            result = result * $base + match try!($e.peek()) {
+                Some(ch) if $check_digit(ch) => xdigit_to_int(ch) as i64,
+                Some(_) | None => break,
+            };
+            $e.advance();
+        }
+        if $negative {
+            result = -result;
+        }
+        Ok(Value::Integer(result))
+    }}
+}
+
+macro_rules! match_any {
+    ($e:expr, $error:ident, $($item:expr),+) => {
+        match peek_no_eof!($e) {
+            $(
+                $item => $e.advance(),
+            )*
+            _ => { return $e.parse_error(ErrorCode::$error); },
+        }
+    }
+}
 
 impl<Iter> Parser<Iter>
     where Iter: Iterator<Item=io::Result<u8>>
@@ -452,7 +470,115 @@ impl<Iter> Parser<Iter>
     }
 
     fn parse_number(&mut self) -> Result<Value> {
-        panic!("Not implemented")
+        let mut buffer = Vec::new();
+
+        // Optional sign.
+        let negative = match peek_no_eof!(self) {
+            b'-' => { self.advance(); true },
+            b'+' => { self.advance(); false },
+            _ => false,
+        };
+
+        // Detect octal/hex/nan/inf numbers.
+        match peek_no_eof!(self) {
+            b'0' => {
+                buffer.push(b'0');
+                self.advance();
+                match try!(self.peek()) {
+                    None => (),
+                    Some(b'x') | Some(b'X') => {
+                        buffer.push(b'x');
+                        self.advance();
+                        return parse_digits!(self, 16, is_xdigit_character, negative)
+                    },
+                    Some(ch) if is_octal_character(ch) =>
+                        return parse_digits!(self, 8, is_octal_character, negative),
+                    Some(_) => (),
+                }
+            },
+            b'N' | b'n' => {
+                self.advance();
+                match_any!(self, InvalidNumberValue, b'a', b'A');
+                match_any!(self, InvalidNumberValue, b'n', b'N');
+                return Ok(Value::Float(if negative { -NAN } else { NAN }));
+            },
+            b'I' | b'i' => {
+                self.advance();
+                match_any!(self, InvalidNumberValue, b'n', b'N');
+                match_any!(self, InvalidNumberValue, b'f', b'F');
+                match try!(self.peek()) {
+                    Some(b'i') | Some(b'I') => {
+                        self.advance();
+                        match_any!(self, InvalidNumberValue, b'n', b'N');
+                        match_any!(self, InvalidNumberValue, b'i', b'I');
+                        match_any!(self, InvalidNumberValue, b't', b'T');
+                        match_any!(self, InvalidNumberValue, b'y', b'Y');
+                    }
+                    _ => (),
+                }
+                return Ok(Value::Float(if negative { -INFINITY } else { INFINITY }));
+            },
+            _ => (),
+        }
+
+        let mut dot_seen = false;
+        let mut exp_seen = false;
+        loop {
+            match try!(self.peek()) {
+                None => break,
+                Some(b'e') | Some(b'E') => {
+                    if exp_seen {
+                        return self.parse_error(ErrorCode::InvalidNumberValue);
+                    }
+                    exp_seen = true;
+                    buffer.push(b'e');
+                    self.advance();
+                    // Optional exponent sign.
+                    match peek_no_eof!(self) {
+                        ch @b'-' | ch @b'+' => {
+                            buffer.push(ch);
+                            self.advance();
+                        },
+                        _ => (),
+                    }
+                },
+                Some(b'.') => {
+                    if dot_seen {
+                        return self.parse_error(ErrorCode::InvalidNumberValue);
+                    }
+                    dot_seen = true;
+                    buffer.push(b'.');
+                    self.advance();
+                },
+                Some(ch @b'0'...b'9') => {
+                    buffer.push(ch);
+                    self.advance();
+                },
+                Some(_) =>
+                    return self.parse_error(ErrorCode::InvalidNumberValue),
+            }
+        }
+
+        if buffer.len() == 0 {
+            return self.parse_error(ErrorCode::InvalidNumberValue);
+        }
+
+        let string_value = match String::from_utf8(buffer) {
+            Err(_) => return self.parse_error(ErrorCode::InvalidUtf8Sequence),
+            Ok(value) => value,
+        };
+
+        if dot_seen || exp_seen {
+            match string_value.parse::<f64>() {
+                Ok(value) => Ok(Value::Float(if negative { -value } else { value })),
+                Err(_) => self.parse_error(ErrorCode::InvalidNumberValue),
+            }
+        } else {
+            match string_value.parse::<i64>() {
+                Ok(value) => Ok(Value::Integer(if negative { -value } else { value })),
+                Err(_) => self.parse_error(ErrorCode::InvalidNumberValue),
+            }
+        }
     }
 
     pub fn parse_message(&mut self) -> Result<Value> {
@@ -475,6 +601,7 @@ impl<Iter> Parser<Iter>
 #[cfg(test)]
 mod tests {
 	use super::*;
+	use super::super::value::Value;
 	use std::io::{Cursor, Read};
 
 	#[test]
@@ -683,4 +810,53 @@ mod tests {
     make_string_test!(string_empty, "\"\"", "");
     make_string_test!(string_foo_bar, "\"foo bar\"", "foo bar");
     make_string_test!(string_unicode, "\"☺\"", "☺");
+
+    macro_rules! make_number_tests {
+        ($t:ident, $($name:ident, $str:expr, $expected:expr),+) => {
+            $(
+            #[test]
+            fn $name() {
+                let mut p = Parser::new(Cursor::new($str.as_bytes()).bytes());
+                match p.parse_number().unwrap() {
+                    Value::$t(value) => assert_eq!($expected, value),
+                    _ => panic!("{} decoded into in incorrect type", stringify!($t)),
+                }
+            }
+            )*
+        }
+    }
+
+    make_number_tests!(Integer,
+                       integer_zero, "0", 0,
+                       integer_zero_octal, "00", 0,
+                       integer_zero_hex, "0x0", 0,
+                       integer_negative, "-42", -42,
+                       integer_signed, "+42", 42,
+                       integer_hex, "0xCAFE", 0xCAFE,
+                       integer_octal, "01744", 0o1744,
+                       integer_negative_oct, "-0644", -0o644);
+
+    make_number_tests!(Float,
+                       float_zero, "0.0", 0f64,
+                       float_zero_exp, "0e0", 0f64,
+                       float_zero_negative, "-0.0", -0f64,
+                       float_exp_negative, "1e-0", 1e-0_f64,
+                       float_negative_exp_negative, "-1e-0", -1e0_f64);
+
+    macro_rules! make_exotic_float_tests {
+        ($check:ident, $name:ident, $($str:expr),+) => {
+            #[test]
+            fn $name() {
+                $({
+                    println!($str);
+                    let mut p = Parser::new(Cursor::new($str.as_bytes()).bytes());
+                    assert!(p.parse_number().unwrap().as_float().unwrap().$check());
+                })*
+            }
+        }
+    }
+
+    make_exotic_float_tests!(is_nan, float_nan, "NaN", "nan", "NAN", "nAn", "nAN", "Nan");
+    make_exotic_float_tests!(is_infinite, float_inf, "Inf", "inf", "iNf", "iNF",
+                             "Infinity", "infinity", "iNfInItY", "iNFiniTy");
 }
