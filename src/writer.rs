@@ -5,7 +5,6 @@
 //
 
 use std::io;
-use std::fmt;
 use std::collections::BTreeMap;
 use super::value::Value;
 
@@ -279,7 +278,7 @@ impl<W, F> Writer<W, F>
 mod tests {
 	use super::*;
     use super::super::value::Value;
-    use std::io::{Cursor, Write};
+    use std::io::Cursor;
     use std::collections::BTreeMap;
     use std::f64::{NAN, INFINITY};
 
