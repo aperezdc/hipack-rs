@@ -17,7 +17,7 @@ trait Formatter {
         where W: io::Write;
     fn key_separator<W>(&mut self, writer: &mut W, next: &Value) -> io::Result<()>
         where W: io::Write;
-    fn item_separator<W>(&mut self, writer: &mut W, next: &Value, in_dict: bool) -> io::Result<()>
+    fn item_separator<W>(&mut self, writer: &mut W, next: &Value) -> io::Result<()>
         where W: io::Write;
 }
 
@@ -46,7 +46,7 @@ impl Formatter for CompactFormatter {
         }
     }
 
-    fn item_separator<W>(&mut self, writer: &mut W, next: &Value, in_dict: bool) -> io::Result<()>
+    fn item_separator<W>(&mut self, writer: &mut W, next: &Value) -> io::Result<()>
         where W: io::Write
     {
         match *next {
@@ -104,7 +104,7 @@ impl Formatter for PrettyFormatter {
         }
     }
 
-    fn item_separator<W>(&mut self, writer: &mut W, next: &Value, in_dict: bool) -> io::Result<()>
+    fn item_separator<W>(&mut self, writer: &mut W, next: &Value) -> io::Result<()>
         where W: io::Write
     {
         try!(writer.write(b"\n"));
@@ -209,8 +209,8 @@ impl<W, F> Writer<W, F>
                 Some(value) => {
                     try!(self.write_value(value));
                     match iter.peek () {
-                        Some(&value_) =>
-                            try!(self.format.item_separator(&mut self.writer, value, false)),
+                        Some(_) =>
+                            try!(self.format.item_separator(&mut self.writer, value)),
                         None => (),
                     }
                 },
@@ -240,7 +240,7 @@ impl<W, F> Writer<W, F>
                     try!(self.write_value(value));
                     match iter.peek () {
                         Some(&(_, ref value)) =>
-                            try!(self.format.item_separator(&mut self.writer, value, true)),
+                            try!(self.format.item_separator(&mut self.writer, value)),
                         None => (),
                     }
                 },
