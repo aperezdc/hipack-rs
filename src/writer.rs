@@ -172,11 +172,20 @@ impl<W, F> Writer<W, F>
     }
 
     fn write_float(&mut self, value: f64) -> io::Result<()> {
-        unreachable!();
+        if value.is_nan() || value.is_infinite() {
+            write!(self.writer, "{}", value)
+        } else {
+            let s = format!("{}", value);
+            try!(self.writer.write_all(s.as_bytes()));
+            if !s.contains(".") {
+                try!(self.writer.write_all(b".0"));
+            }
+            Ok(())
+        }
     }
 
     fn write_integer(&mut self, value: i64) -> io::Result<()> {
-        unreachable!();
+        write!(self.writer, "{}", value)
     }
 
     fn write_string(&mut self, value: &String) -> io::Result<()> {
@@ -266,6 +275,7 @@ mod tests {
     use super::super::value::Value;
     use std::io::{Cursor, Write};
     use std::collections::BTreeMap;
+    use std::f64::{NAN, INFINITY};
 
     macro_rules! make_write_test {
         ($name:ident, $value:expr, $pretty:expr, $compact:expr) => {
@@ -324,4 +334,21 @@ mod tests {
     make_write_string_test!(string_unicode, "☺", "\"☺\"");
     make_write_string_test!(string_escapes, "\n\r\t\\\"", "\"\\n\\r\\t\\\\\\\"\"");
     make_write_string_test!(string_hexcode, "\0", "\"\\00\"");
+
+
+    macro_rules! make_write_number_test {
+        ($t:ident, $name:ident, $value:expr, $expected:expr) => {
+            make_write_test!($name, &Value::$t($value), $expected, $expected);
+        }
+    }
+
+    make_write_number_test!(Integer, integer_zero, 0, "0");
+    make_write_number_test!(Integer, integer_negative, -34, "-34");
+
+    make_write_number_test!(Float, float_zero, 0.0, "0.0");
+    make_write_number_test!(Float, float_suffix, 1f64, "1.0");
+    make_write_number_test!(Float, float_positive, 4.5, "4.5");
+    make_write_number_test!(Float, float_negative, -3.2, "-3.2");
+    make_write_number_test!(Float, float_nan, NAN, "NaN");
+    make_write_number_test!(Float, float_infinite, INFINITY, "inf");
 }
