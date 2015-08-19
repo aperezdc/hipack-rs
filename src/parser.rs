@@ -648,35 +648,40 @@ mod tests {
         }
     }
 
-    macro_rules! make_fail_test {
-        ($name:ident, $str:expr) => {
+    macro_rules! make_fail_tests {
+        ($($name:ident, $str:expr),+) => {
+            $(
             #[test] #[should_panic]
             fn $name() {
                 let input = Cursor::new($str.as_bytes());
                 let mut p = Parser::new(input.bytes());
                 p.parse_list().unwrap().as_list();
             }
+            )*
         }
     }
 
-    macro_rules! make_bool_test {
-        ($name:ident, $str:expr, $expected:expr) => {
+    macro_rules! make_bool_tests {
+        ($expected:expr, $($name:ident, $str:expr),+) => {
+            $(
             #[test]
             fn $name() {
                 let input = Cursor::new($str.as_bytes());
                 let mut p = Parser::new(input.bytes());
                 assert_eq!(Some($expected), p.parse_bool().unwrap().as_bool());
             }
+            )*
         }
     }
 
-    make_bool_test!(parse_true,        "true",  true);
-    make_bool_test!(parse_true_upper,  "True",  true);
-    make_bool_test!(parse_false,       "false", false);
-    make_bool_test!(parse_false_upper, "False", false);
-
-    make_fail_test!(parse_true_allupper,  "TRUE");
-    make_fail_test!(parse_false_allupper, "FALSE");
+    make_bool_tests!(true,
+                     parse_true,       "true",
+                     parse_true_upper, "True");
+    make_bool_tests!(false,
+                     parse_false,       "false",
+                     parse_false_upper, "False");
+    make_fail_tests!(parse_true_allupper,  "TRUE",
+                     parse_false_allupper, "FALSE");
 
 
     macro_rules! make_list_test {
@@ -731,13 +736,13 @@ mod tests {
         assert_eq!(Some(false), value[1].as_bool());
     });
 
-    make_fail_test!(list_unterminated, "[");
-    make_fail_test!(list_unterminated_space, "[  ");
-    make_fail_test!(list_unterminated_one_item, "[true");
-    make_fail_test!(list_unterminated_one_item_space, "[true ");
-    make_fail_test!(list_unterminated_one_item_comma, "[true,");
-    make_fail_test!(list_unterminated_one_item_commaspace, "[true, ");
-    make_fail_test!(list_unterminated_one_item_spacecommaspace, "[true , ");
+    make_fail_tests!(list_unterminated, "[",
+                     list_unterminated_space, "[  ",
+                     list_unterminated_one_item, "[true",
+                     list_unterminated_one_item_space, "[true ",
+                     list_unterminated_one_item_comma, "[true,",
+                     list_unterminated_one_item_commaspace, "[true, ",
+                     list_unterminated_one_item_spacecommaspace, "[true , ");
 
 
     macro_rules! make_dict_test {
@@ -787,29 +792,31 @@ mod tests {
         assert_eq!(false, value.get("b").unwrap().as_bool().unwrap());
     });
 
-    make_fail_test!(dict_unterminated, "{");
-    make_fail_test!(dict_unterminated_with_key, "{ key");
-    make_fail_test!(dict_unterminated_with_key_space, "{ key ");
-    make_fail_test!(dict_unterminated_with_key_colon, "{ key:");
-    make_fail_test!(dict_unterminated_with_key_colonspace, "{ key: ");
-    make_fail_test!(dict_missing_value, "{ key }");
-    make_fail_test!(dict_missing_value_colon, "{ key: }");
+    make_fail_tests!(dict_unterminated, "{",
+                     dict_unterminated_with_key, "{ key",
+                     dict_unterminated_with_key_space, "{ key ",
+                     dict_unterminated_with_key_colon, "{ key:",
+                     dict_unterminated_with_key_colonspace, "{ key: ",
+                     dict_missing_value, "{ key }",
+                     dict_missing_value_colon, "{ key: }");
 
 
-    macro_rules! make_string_test {
-        ($name:ident, $str:expr, $expected:expr) => {
+    macro_rules! make_string_tests {
+        ($($name:ident, $str:expr, $expected:expr),+) => {
+            $(
             #[test]
             fn $name() {
                 let input = Cursor::new($str.as_bytes());
                 let mut p = Parser::new(input.bytes());
                 assert_eq!($expected, p.parse_string().unwrap().as_string().unwrap());
             }
+            )*
         }
     }
 
-    make_string_test!(string_empty, "\"\"", "");
-    make_string_test!(string_foo_bar, "\"foo bar\"", "foo bar");
-    make_string_test!(string_unicode, "\"☺\"", "☺");
+    make_string_tests!(string_empty, "\"\"", "",
+                       string_foo_bar, "\"foo bar\"", "foo bar",
+                       string_unicode, "\"☺\"", "☺");
 
     macro_rules! make_number_tests {
         ($t:ident, $($name:ident, $str:expr, $expected:expr),+) => {

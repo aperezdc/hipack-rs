@@ -328,32 +328,33 @@ mod tests {
         b
     })()), "{\n  bar: False\n  foo: True\n}", "{bar:False,foo:True}");
 
-    macro_rules! make_write_string_test {
-        ($name:ident, $value:expr, $expected:expr) => {
-            make_write_test!($name, &Value::String($value.to_string()), $expected, $expected);
+    macro_rules! make_write_string_tests {
+        ($($name:ident, $value:expr, $expected:expr),+) => {
+            $( make_write_test!($name, &Value::String($value.to_string()), $expected, $expected); )*
         }
     }
 
-    make_write_string_test!(string_empty, "", "\"\"");
-    make_write_string_test!(string_non_empty, "foo bar", "\"foo bar\"");
-    make_write_string_test!(string_unicode, "☺", "\"☺\"");
-    make_write_string_test!(string_escapes, "\n\r\t\\\"", "\"\\n\\r\\t\\\\\\\"\"");
-    make_write_string_test!(string_hexcode, "\0", "\"\\00\"");
+    make_write_string_tests!(string_empty, "", "\"\"",
+                             string_non_empty, "foo bar", "\"foo bar\"",
+                             string_unicode, "☺", "\"☺\"",
+                             string_escapes, "\n\r\t\\\"", "\"\\n\\r\\t\\\\\\\"\"",
+                             string_hexcode, "\0", "\"\\00\"");
 
 
-    macro_rules! make_write_number_test {
-        ($t:ident, $name:ident, $value:expr, $expected:expr) => {
-            make_write_test!($name, &Value::$t($value), $expected, $expected);
+    macro_rules! make_write_number_tests {
+        ($t:ident, $($name:ident, $value:expr, $expected:expr),+) => {
+            $( make_write_test!($name, &Value::$t($value), $expected, $expected); )*
         }
     }
 
-    make_write_number_test!(Integer, integer_zero, 0, "0");
-    make_write_number_test!(Integer, integer_negative, -34, "-34");
-
-    make_write_number_test!(Float, float_zero, 0.0, "0.0");
-    make_write_number_test!(Float, float_suffix, 1f64, "1.0");
-    make_write_number_test!(Float, float_positive, 4.5, "4.5");
-    make_write_number_test!(Float, float_negative, -3.2, "-3.2");
-    make_write_number_test!(Float, float_nan, NAN, "NaN");
-    make_write_number_test!(Float, float_infinite, INFINITY, "inf");
+    make_write_number_tests!(Integer,
+                             integer_zero, 0, "0",
+                             integer_negative, -34, "-34");
+    make_write_number_tests!(Float,
+                             float_zero, 0.0, "0.0",
+                             float_suffix, 1f64, "1.0",
+                             float_positive, 4.5, "4.5",
+                             float_negative, -3.2, "-3.2",
+                             float_nan, NAN, "NaN",
+                             float_infinite, INFINITY, "inf");
 }
