@@ -2,3 +2,7 @@
 name = "hipack"
 version = "0.1.0"
 authors = ["Adrian Perez de Castro <aperez@igalia.com>"]
+repository = "https://github.com/aperezdc/hipack-rs"
+license = "MIT"
+description = "Serialization/deserialization for the HiPack format"
+keywords = ["hipack", "serialization"]
