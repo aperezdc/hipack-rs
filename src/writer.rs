@@ -103,7 +103,7 @@ impl Formatter for PrettyFormatter {
         }
     }
 
-    fn item_separator<W>(&mut self, writer: &mut W, next: &Value) -> io::Result<()>
+    fn item_separator<W>(&mut self, writer: &mut W, _next: &Value) -> io::Result<()>
         where W: io::Write
     {
         try!(writer.write(b"\n"));
