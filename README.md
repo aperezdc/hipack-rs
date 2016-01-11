@@ -1,6 +1,7 @@
 # hipack-rs
 
 [![Build status](https://img.shields.io/travis/aperezdc/hipack-rs.svg?style=flat)](https://travis-ci.org/aperezdc/hipack-rs)
+[![Code coverage](https://img.shields.io/coveralls/aperezdc/hipack-rs/master.svg?style=flat)](https://coveralls.io/r/aperezdc/hipack-rs?branch=master)
 
 ## License
 
