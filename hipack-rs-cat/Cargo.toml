@@ -2,6 +2,7 @@
 name = "hipack-rs-cat"
 version = "0.1.0"
 authors = ["Adrian Perez de Castro <aperez@igalia.com>"]
+license = "MIT/Apache-2.0"
 
 [dependencies]
 hipack = { version = "*", path = ".." }
