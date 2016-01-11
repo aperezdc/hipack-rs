@@ -1,5 +1,7 @@
 # hipack-rs
 
+[![Build status](https://img.shields.io/travis/aperezdc/hipack-rs.svg?style=flat)](https://travis-ci.org/aperezdc/hipack-rs)
+
 ## License
 
 Licensed under either of
