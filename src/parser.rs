@@ -14,7 +14,7 @@ use std::f64::{NAN, INFINITY};
 
 
 #[derive(Clone, PartialEq)]
-enum ErrorCode {
+pub enum ErrorCode {
     ExpectedDictKey,
     ExpectedSeparator,
     InvalidBoolValue,
@@ -49,7 +49,7 @@ impl fmt::Debug for ErrorCode {
 
 
 #[derive(Debug)]
-enum Error {
+pub enum Error {
     SyntaxError(ErrorCode, usize, usize), // Error, line, column
     IoError(io::Error),
 }

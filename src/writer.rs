@@ -9,7 +9,7 @@ use std::collections::BTreeMap;
 use super::value::Value;
 
 
-trait Formatter {
+pub trait Formatter {
     fn start_compound<W>(&mut self, writer: &mut W, ch: u8) -> io::Result<()>
         where W: io::Write;
     fn end_compound<W>(&mut self, writer: &mut W, ch: u8) -> io::Result<()>
